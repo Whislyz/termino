@@ -1,0 +1,54 @@
+{
+  "name": "@whislyz/termino",
+  "version": "0.1.0",
+  "description": "An endless runner for your terminal - a dinosaur, some cacti, and half-block pixel art. Zero dependencies.",
+  "bin": {
+    "termino": "bin/termino.js"
+  },
+  "main": "bin/termino.js",
+  "type": "commonjs",
+  "files": [
+    "bin/",
+    "test/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node bin/termino.js",
+    "test": "node test/clearance.js && node test/autoplay.js 30",
+    "test:clearance": "node test/clearance.js",
+    "test:autoplay": "node test/autoplay.js 120"
+  },
+  "keywords": [
+    "game",
+    "terminal",
+    "cli",
+    "tui",
+    "ascii",
+    "dinosaur",
+    "endless-runner",
+    "iterm2",
+    "no-dependencies"
+  ],
+  "author": "Toan Tran (https://github.com/Whislyz)",
+  "license": "MIT",
+  "homepage": "https://github.com/Whislyz/termino#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Whislyz/termino.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Whislyz/termino/issues"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
