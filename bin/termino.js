@@ -12,13 +12,17 @@
  *   space / up / w  jump      down / s  duck        p  pause
  *   r  restart                q / ctrl-c  quit
  *
+ * Run with no arguments and it splits the terminal first and plays in the new
+ * pane - see SPLITTERS near the bottom. --here plays in the current pane, and
+ * is also how the child avoids splitting again forever.
+ *
  * Zero dependencies, so it runs anywhere Node does.
  */
 
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFile } = require('child_process');
+const { spawnSync } = require('child_process');
 
 // ---------------------------------------------------------------- tuning ----
 
@@ -745,10 +749,14 @@ function quit(code) {
 const HELP = [
   'termino - an endless runner for your terminal',
   '',
-  '  usage: termino [--split]',
+  '  usage: termino [--here]',
   '',
-  '  --split      split the current iTerm2 pane and play in the new one,',
-  '               leaving whatever runs on the left alone (macOS + iTerm2 only)',
+  '  Plain `termino` splits the terminal and starts the game in the new pane,',
+  '  so whatever you were watching in this one keeps running. Works in tmux,',
+  '  zellij, iTerm2, WezTerm, kitty and Windows Terminal.',
+  '',
+  '  --here       skip the split, play in this pane (also: TERMINO_HERE=1)',
+  '  --where      name the splitter that would be used, then exit',
   '  -h, --help   this',
   '',
   '  space / up / w   jump',
@@ -764,45 +772,124 @@ const HELP = [
 ].join('\n');
 
 /**
- * Open a second pane beside this one and start the game there. iTerm2 calls a
- * left/right divider a "vertical" split. The new session is captured in a
- * variable rather than re-read as "current session", because iTerm moves focus
- * to the new pane the moment it is created.
+ * The command the new pane runs. --here is what stops the child from splitting
+ * again, forever. An absolute path to this file rather than the `termino` name,
+ * so it also works from an npx cache that was never added to PATH.
  */
-function splitPane() {
-  if (process.platform !== 'darwin' || process.env.TERM_PROGRAM !== 'iTerm.app') {
-    process.stderr.write(
-      '--split drives iTerm2 on macOS via AppleScript.\n' +
-        `This is ${process.env.TERM_PROGRAM || 'an unrecognised terminal'}` +
-        ` on ${process.platform}.\n` +
-        'Split the window with your terminal\'s own shortcut, then run: termino\n'
-    );
-    process.exit(1);
-  }
-  const self = `'${process.execPath}' '${__filename}'`;
-  const script = [
+function selfArgv() {
+  return [process.execPath, __filename, '--here'];
+}
+
+/** POSIX single-quote, so a path containing spaces survives a command string. */
+function shq(s) {
+  return "'" + String(s).split("'").join("'\\''") + "'";
+}
+
+/** Escape for embedding inside an AppleScript double-quoted string. */
+function asq(s) {
+  return String(s).split('\\').join('\\\\').split('"').join('\\"');
+}
+
+/**
+ * iTerm2 calls a left/right divider a "vertical" split. The new session is
+ * captured in a variable rather than re-read as "current session", because
+ * iTerm moves focus to the new pane the moment it is created.
+ */
+function itermScript() {
+  return [
     'tell application "iTerm2"',
     '  tell current window',
     '    tell current session',
     '      set newSession to (split vertically with same profile)',
     '    end tell',
     '    tell newSession',
-    `      write text "clear; ${self}"`,
+    `      write text "clear; ${asq(selfArgv().map(shq).join(' '))}"`,
     '      select',
     '    end tell',
     '  end tell',
     'end tell',
   ].join('\n');
-  execFile('osascript', ['-e', script], (err, _stdout, stderr) => {
-    if (err) {
-      process.stderr.write(
-        'Could not drive iTerm2. If macOS has not asked yet, allow automation\n' +
-          'under System Settings > Privacy & Security > Automation, then retry.\n' +
-          (stderr || err.message)
-      );
-      process.exit(1);
-    }
-  });
+}
+
+let splitError = '';
+
+/** Run a splitter binary. Returns true only if it actually did something. */
+function runTool(cmd, args) {
+  const r = spawnSync(cmd, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+  if (r.error) {
+    splitError = `${cmd}: ${r.error.code === 'ENOENT' ? 'not on PATH' : r.error.message}`;
+    return false;
+  }
+  if (r.status !== 0) {
+    splitError = `${cmd} exited ${r.status}` + (r.stderr ? `: ${String(r.stderr).trim()}` : '');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Ordered because more than one can be true at once: a tmux session inside
+ * iTerm2 owns the panes the user actually sees, so tmux has to win.
+ */
+const SPLITTERS = [
+  {
+    name: 'tmux',
+    when: () => !!process.env.TMUX,
+    run: () => runTool('tmux', ['split-window', '-h', selfArgv().map(shq).join(' ')]),
+  },
+  {
+    name: 'zellij',
+    when: () => !!process.env.ZELLIJ,
+    run: () =>
+      runTool('zellij', ['action', 'new-pane', '--direction', 'right', '--', ...selfArgv()]),
+  },
+  {
+    name: 'iTerm2',
+    when: () => process.platform === 'darwin' && process.env.TERM_PROGRAM === 'iTerm.app',
+    run: () => runTool('osascript', ['-e', itermScript()]),
+    hint:
+      'If macOS has not asked yet, allow automation under\n' +
+      'System Settings > Privacy & Security > Automation.',
+  },
+  {
+    name: 'WezTerm',
+    when: () => !!process.env.WEZTERM_PANE,
+    run: () => runTool('wezterm', ['cli', 'split-pane', '--right', '--', ...selfArgv()]),
+  },
+  {
+    name: 'kitty',
+    when: () => !!process.env.KITTY_WINDOW_ID,
+    // `kitten` is the modern name for the client; older builds only ship `kitty`.
+    run: () => {
+      const args = ['@', 'launch', '--location=vsplit', '--cwd=current', ...selfArgv()];
+      return runTool('kitten', args) || runTool('kitty', args);
+    },
+    hint: 'kitty needs `allow_remote_control yes` in kitty.conf for this.',
+  },
+  {
+    name: 'Windows Terminal',
+    when: () => !!process.env.WT_SESSION,
+    run: () => runTool('wt.exe', ['-w', '0', 'split-pane', ...selfArgv()]),
+  },
+  {
+    name: 'Terminal.app',
+    // Terminal has no panes at all, so a new window is the nearest thing to
+    // "somewhere other than here".
+    when: () => process.platform === 'darwin' && process.env.TERM_PROGRAM === 'Apple_Terminal',
+    run: () =>
+      runTool('osascript', [
+        '-e',
+        `tell application "Terminal" to do script "clear; ${asq(
+          selfArgv().map(shq).join(' ')
+        )}"`,
+      ]),
+    hint: 'Terminal.app cannot split panes, so this opens a new window.',
+  },
+];
+
+function detectSplitter() {
+  for (const s of SPLITTERS) if (s.when()) return s;
+  return null;
 }
 
 function main() {
@@ -811,10 +898,42 @@ function main() {
     process.stdout.write(HELP);
     return;
   }
-  if (argv.includes('--split')) {
-    splitPane();
+  if (argv.includes('--where')) {
+    const s = detectSplitter();
+    process.stdout.write(s ? `${s.name}\n` : 'nothing here can split - termino would play in place\n');
     return;
   }
+
+  // --split used to be the opt-in flag for this; it is the default now, so keep
+  // accepting it rather than erroring on muscle memory.
+  const here =
+    argv.includes('--here') ||
+    argv.includes('--no-split') ||
+    process.env.TERMINO_HERE === '1';
+  if (!here) {
+    // Deliberately before the TTY check below: the game will run on the new
+    // pane's terminal, so this pane having no tty of its own is irrelevant.
+    // That is what lets a keybinding or a script launch the game.
+    const s = detectSplitter();
+    if (s && s.run()) return; // the game is running next door now
+    if (s) {
+      process.stderr.write(
+        `termino: could not split ${s.name}.\n${splitError}\n` +
+          (s.hint ? `${s.hint}\n` : '') +
+          'Play in this pane instead with: termino --here\n'
+      );
+      process.exit(1);
+    }
+    // Nothing here can split. Better to play than to refuse; this line stays in
+    // the scrollback and is what you see once you quit.
+    if (process.stdout.isTTY) {
+      process.stdout.write(
+        '\x1b[2mno split-capable terminal detected - playing here.' +
+          ' run termino inside tmux for a pane.\x1b[0m\n'
+      );
+    }
+  }
+
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     process.stderr.write('termino needs an interactive terminal.\n');
     process.exit(1);

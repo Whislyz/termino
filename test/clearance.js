@@ -9,6 +9,7 @@ const path = require('path');
 const os = require('os');
 
 process.env.TERMINO_HISCORE = path.join(os.tmpdir(), 'termino-test-hiscore');
+process.env.TERMINO_HERE = '1'; // requiring the game must not split the terminal
 
 // The game boots a render loop on require, so stub a TTY and silence it.
 process.stdout.isTTY = true;

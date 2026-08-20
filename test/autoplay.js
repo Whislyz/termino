@@ -10,6 +10,7 @@ const os = require('os');
 
 // The bot's scores are not anybody's high score.
 process.env.TERMINO_HISCORE = path.join(os.tmpdir(), 'termino-test-hiscore');
+process.env.TERMINO_HERE = '1'; // requiring the game must not split the terminal
 
 const SECONDS = Number(process.argv[2] || 60);
 const COLS = Number(process.argv[3] || 84);

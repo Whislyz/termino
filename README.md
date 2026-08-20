@@ -4,9 +4,10 @@
 [![npm](https://img.shields.io/npm/v/@whislyz/termino)](https://www.npmjs.com/package/@whislyz/termino)
 [![license](https://img.shields.io/npm/l/@whislyz/termino)](LICENSE)
 
-An endless runner for your terminal. A dinosaur, some cacti, and nothing to
-install. Built to sit in a split pane and give you something to do while a long
-build, deploy, or test suite grinds away next to it.
+An endless runner for your terminal. Type `termino` in any terminal and it
+**splits the pane and starts the game beside you** — whatever was running in the
+current pane keeps running. Built for the dead time in a long build, deploy, or
+test suite.
 
 ```
  termino                                                          00268
@@ -29,31 +30,51 @@ build, deploy, or test suite grinds away next to it.
 
 *(a real frame, mid-jump over a cactus cluster — it's in colour in the terminal)*
 
-## Play
-
-```sh
-npx @whislyz/termino
-```
-
-That's it — no install, no dependencies. Or keep it around:
+## Install
 
 ```sh
 npm install -g @whislyz/termino
+```
+
+That puts `termino` on your `PATH` — no alias to add, no shell rc to edit, no
+dependencies. From then on, in any terminal:
+
+```sh
 termino
 ```
 
-### Beside something else
+Your pane splits, the game starts on the right and takes focus, and the thing
+you were watching stays put on the left. Press `q` and the pane closes.
 
-On macOS + iTerm2, let it split the window for you. Whatever is running in the
-current pane stays put; the game opens on the right and takes focus:
+Just want to try it once without installing? `npx @whislyz/termino` behaves
+identically — it splits too, launching the copy out of the npx cache.
+
+### Where it can split
+
+`termino` looks for a way to split, in this order, and uses the first one that
+fits. A multiplexer wins over the terminal app, because when tmux is running
+its panes are the ones you actually see.
+
+| | how | needs |
+| --- | --- | --- |
+| tmux | `split-window -h` | `$TMUX` — works on any OS, any terminal |
+| zellij | `action new-pane` | `$ZELLIJ` |
+| iTerm2 | AppleScript | macOS Automation permission, asked once |
+| WezTerm | `wezterm cli split-pane` | `$WEZTERM_PANE` |
+| kitty | `kitten @ launch` | `allow_remote_control yes` in `kitty.conf` |
+| Windows&nbsp;Terminal | `wt split-pane` | `$WT_SESSION` |
+| Terminal.app | AppleScript | has no panes, so opens a new **window** |
+
+Somewhere else entirely — Alacritty, a bare ssh session, VS Code's terminal —
+nothing can split, so the game just plays in the current pane and says so. The
+portable fix is to run it inside tmux.
+
+To skip the split deliberately:
 
 ```sh
-termino --split
+termino --here          # or: export TERMINO_HERE=1
+termino --where         # names the splitter it would use, and exits
 ```
-
-macOS will ask permission to control iTerm2 the first time (System Settings →
-Privacy & Security → Automation). In any other terminal, use its own split
-shortcut and run `termino` in the new pane.
 
 ## Controls
 
@@ -79,9 +100,9 @@ now. Wants a pane of at least 44×12; 80×20 or larger looks right. Resizing
 re-lays out mid-game.
 
 Developed and played on macOS with iTerm2. The game logic is tested in CI on
-Linux, macOS, and Windows across Node 18/20/22, and nothing outside `--split` is
-platform-specific — but interactive play on Windows Terminal is untested, so
-tell me if it misbehaves.
+Linux, macOS, and Windows across Node 18/20/22, and nothing outside the
+splitters is platform-specific — but interactive play on Windows Terminal is
+untested, so tell me if it misbehaves.
 
 ## How it draws
 

@@ -1,7 +1,7 @@
 {
   "name": "@whislyz/termino",
-  "version": "0.1.0",
-  "description": "An endless runner for your terminal - a dinosaur, some cacti, and half-block pixel art. Zero dependencies.",
+  "version": "0.2.0",
+  "description": "Type `termino` and it splits your terminal to play an endless runner beside your work. Half-block pixel art, zero dependencies.",
   "bin": {
     "termino": "bin/termino.js"
   },
@@ -27,6 +27,8 @@
     "ascii",
     "dinosaur",
     "endless-runner",
+    "split-pane",
+    "tmux",
     "iterm2",
     "no-dependencies"
   ],
