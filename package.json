@@ -1,5 +1,5 @@
 {
-  "name": "termino",
+  "name": "@whislyz/termino",
   "version": "0.2.0",
   "description": "Type `termino` and it splits your terminal to play an endless runner beside your work. Half-block pixel art, zero dependencies.",
   "bin": {
