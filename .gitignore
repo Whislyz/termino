@@ -2,6 +2,7 @@ node_modules/
 package-lock.json
 *.log
 *.tgz
+.npmrc
 .DS_Store
 .idea/
 .vscode/
