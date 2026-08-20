@@ -1,8 +1,8 @@
 # Termino
 
 [![test](https://github.com/Whislyz/termino/actions/workflows/test.yml/badge.svg)](https://github.com/Whislyz/termino/actions/workflows/test.yml)
-[![npm](https://img.shields.io/npm/v/@whislyz/termino)](https://www.npmjs.com/package/@whislyz/termino)
-[![license](https://img.shields.io/npm/l/@whislyz/termino)](LICENSE)
+[![npm](https://img.shields.io/npm/v/termino)](https://www.npmjs.com/package/termino)
+[![license](https://img.shields.io/npm/l/termino)](LICENSE)
 
 An endless runner for your terminal. Type `termino` in any terminal and it
 **splits the pane and starts the game beside you** — whatever was running in the
@@ -33,7 +33,7 @@ test suite.
 ## Install
 
 ```sh
-npm install -g @whislyz/termino
+npm install -g termino
 ```
 
 That puts `termino` on your `PATH` — no alias to add, no shell rc to edit, no
@@ -46,7 +46,7 @@ termino
 Your pane splits, the game starts on the right and takes focus, and the thing
 you were watching stays put on the left. Press `q` and the pane closes.
 
-Just want to try it once without installing? `npx @whislyz/termino` behaves
+Just want to try it once without installing? `npx termino` behaves
 identically — it splits too, launching the copy out of the npx cache.
 
 ### Where it can split
