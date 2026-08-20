@@ -162,6 +162,25 @@ If you change `GRAVITY`, `JUMP_V`, `SPEED_START`, or any sprite height, re-run
 it. `test/autoplay.js 120` then plays a bot for two minutes and expects zero
 deaths as an end-to-end check.
 
+### Releasing
+
+```sh
+npm run release          # patch bump, or release:minor / release:major
+```
+
+That bumps the version, tags it, runs the gate, publishes, and pushes the
+commit and tag. Plain `npm publish` works too and runs the same gate.
+
+The gate is `scripts/preflight.js`, which stops the publish unless you are
+logged in, the working tree is clean, you are on `main`, you are not behind
+`origin/main`, and the version is not already on the registry. It runs before
+the tests so the common mistakes fail in a second instead of after 30s of
+autoplay. Run it alone with `npm run preflight`.
+
+The working-tree check matters more than it looks: npm builds the tarball from
+what is on disk, not from `HEAD`, so uncommitted edits ship silently and the
+git tag then points at code nobody published.
+
 ## About the game
 
 Termino is an original implementation, written from scratch. Endless runners

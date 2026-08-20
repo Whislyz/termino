@@ -17,7 +17,13 @@
     "start": "node bin/termino.js",
     "test": "node test/clearance.js && node test/autoplay.js 30",
     "test:clearance": "node test/clearance.js",
-    "test:autoplay": "node test/autoplay.js 120"
+    "test:autoplay": "node test/autoplay.js 120",
+    "preflight": "node scripts/preflight.js",
+    "prepublishOnly": "node scripts/preflight.js && npm test",
+    "postpublish": "git push --follow-tags origin main",
+    "release": "npm version patch && npm publish",
+    "release:minor": "npm version minor && npm publish",
+    "release:major": "npm version major && npm publish"
   },
   "keywords": [
     "game",
