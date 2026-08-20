@@ -1,5 +1,9 @@
 # Termino
 
+[![test](https://github.com/Whislyz/termino/actions/workflows/test.yml/badge.svg)](https://github.com/Whislyz/termino/actions/workflows/test.yml)
+[![npm](https://img.shields.io/npm/v/@whislyz/termino)](https://www.npmjs.com/package/@whislyz/termino)
+[![license](https://img.shields.io/npm/l/@whislyz/termino)](LICENSE)
+
 An endless runner for your terminal. A dinosaur, some cacti, and nothing to
 install. Built to sit in a split pane and give you something to do while a long
 build, deploy, or test suite grinds away next to it.
@@ -72,8 +76,12 @@ High score lives in `~/.termino-hiscore` (override with `$TERMINO_HISCORE`).
 
 Node 14 or newer, and a terminal with truecolor — which is nearly all of them
 now. Wants a pane of at least 44×12; 80×20 or larger looks right. Resizing
-re-lays out mid-game. Developed and played on macOS with iTerm2; the game itself
-has no platform-specific code, only `--split` does.
+re-lays out mid-game.
+
+Developed and played on macOS with iTerm2. The game logic is tested in CI on
+Linux, macOS, and Windows across Node 18/20/22, and nothing outside `--split` is
+platform-specific — but interactive play on Windows Terminal is untested, so
+tell me if it misbehaves.
 
 ## How it draws
 
