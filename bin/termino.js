@@ -44,6 +44,14 @@ const SPEED_START = 1.5; // pixels per tick
 const SPEED_MAX = 2.4;
 const SPEED_RAMP = 0.00044; // added per tick, reaches max in about one minute
 const LEVEL_SPAN = 150; // score per level
+// Level-up celebration. The burst is floatier than the dino on purpose: paper
+// falls slower than a dinosaur, and a slow fall keeps the confetti on screen
+// for about as long as the banner it goes with.
+const CONFETTI_COUNT = 72; // pieces per burst
+const CONFETTI_GRAVITY = 0.055; // pixels per tick^2
+const CONFETTI_DRAG = 0.985; // horizontal speed retained per tick
+const CONFETTI_LIFE = 72; // ticks, about two seconds
+const BANNER_TICKS = 46; // how long the LEVEL banner stays up
 // Long enough that one keypress covers a full bird pass even if the terminal's
 // auto-repeat delay is slow to kick in. Jumping cancels the crouch anyway.
 const DUCK_HOLD_MS = 650;
@@ -69,6 +77,11 @@ const PALETTE = [
   [224, 108, 90], // 6 dino, dead
   [90, 90, 110], // 7 star
   [216, 210, 192], // 8 moon
+  [244, 208, 63], // 9 confetti
+  [232, 106, 146], // 10 confetti
+  [104, 190, 232], // 11 confetti
+  [162, 132, 224], // 12 confetti
+  [126, 217, 140], // 13 confetti
 ];
 const C_DINO = 1;
 const C_CACTUS = 2;
@@ -78,6 +91,8 @@ const C_BIRD = 5;
 const C_DEAD = 6;
 const C_STAR = 7;
 const C_MOON = 8;
+// 9..13 only ever appear in a level-up burst, so they are picked from as a set.
+const CONFETTI_COLORS = [9, 10, 11, 12, 13];
 
 // ---------------------------------------------------------------- sprites ---
 
@@ -219,6 +234,8 @@ const state = {
   obstacles: [],
   clouds: [],
   stars: [],
+  confetti: [],
+  banner: 0, // ticks left on the level-up banner
   nextObstacleIn: 0,
   flash: 0,
   night: 0, // 0..1 fade
@@ -312,6 +329,8 @@ function resetRun() {
   state.paused = false;
   state.flash = 0;
   state.night = 0;
+  state.confetti = [];
+  state.banner = 0;
   state.obstacles = [];
   state.nextObstacleIn = state.cols * 0.7;
   state.clouds = [
@@ -363,6 +382,51 @@ function spawnObstacle() {
   state.nextObstacleIn = base + Math.random() * base * 0.9;
 }
 
+/**
+ * Level cleared: pop a burst of confetti out of the dino's head and put the new
+ * level up in the banner rows. Purely cosmetic - the pieces are drawn straight
+ * onto the canvas and never enter collision.
+ */
+function celebrate() {
+  state.banner = BANNER_TICKS;
+  const ds = dinoSprite();
+  const ox = dinoX() + ds.w / 2;
+  const oy = state.groundY - ds.h - Math.round(state.y) - 1;
+  for (let i = 0; i < CONFETTI_COUNT; i++) {
+    // A fan over the upward half-circle, so nothing shoots straight sideways.
+    const ang = -Math.PI * (0.08 + Math.random() * 0.84);
+    const sp = 0.8 + Math.random() * 1.6;
+    state.confetti.push({
+      x: ox,
+      y: oy,
+      vx: Math.cos(ang) * sp * 1.7, // wider than tall: it has a pane to fill
+      vy: Math.sin(ang) * sp, // negative is up, y grows downward here
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      life: CONFETTI_LIFE - Math.floor(Math.random() * 20),
+      phase: Math.floor(Math.random() * 40),
+      wide: Math.random() < 0.45,
+    });
+  }
+}
+
+/** Runs even while dead or unstarted, so a burst always finishes. */
+function stepConfetti() {
+  if (!state.confetti.length) return;
+  const drift = state.started && !state.over ? state.speed * 0.28 : 0;
+  for (const p of state.confetti) {
+    p.life--;
+    p.vy += CONFETTI_GRAVITY;
+    p.vx *= CONFETTI_DRAG;
+    // Paper does not fall straight. Each piece wobbles on its own phase, which
+    // is what keeps the burst from reading as a shower of identical dots.
+    p.x += p.vx - drift + Math.sin((state.tick + p.phase) / 5) * 0.35;
+    p.y += p.vy;
+  }
+  state.confetti = state.confetti.filter(
+    (p) => p.life > 0 && p.y < state.groundY && p.x > -2 && p.x < state.pxW + 2
+  );
+}
+
 function die() {
   state.over = true;
   state.flash = 6;
@@ -376,6 +440,8 @@ function update() {
   state.tick++;
 
   if (state.ducking && Date.now() > state.duckUntil) state.ducking = false;
+  if (state.banner > 0) state.banner--;
+  stepConfetti();
 
   if (!state.started || state.over) {
     // idle: still animate clouds a touch so it does not look frozen
@@ -387,7 +453,11 @@ function update() {
   state.speed = Math.min(SPEED_MAX, state.speed + SPEED_RAMP);
   state.distance += state.speed;
   state.score = Math.floor(state.distance / 3);
-  state.level = Math.floor(state.score / LEVEL_SPAN) + 1;
+  const level = Math.floor(state.score / LEVEL_SPAN) + 1;
+  if (level > state.level) {
+    state.level = level;
+    celebrate();
+  }
 
   // day / night cycle
   const cyc = state.score - NIGHT_AT;
@@ -493,6 +563,21 @@ function drawFrame() {
   const ds = dinoSprite();
   const color = state.over && state.flash % 2 === 0 ? C_DEAD : C_DINO;
   blit(ds, dinoX(), state.groundY - ds.h - Math.round(state.y), color);
+
+  drawConfetti(); // last: the burst falls in front of everything
+}
+
+function drawConfetti() {
+  const { pxW, pxH, px } = state;
+  for (const p of state.confetti) {
+    const x = Math.round(p.x);
+    const y = Math.round(p.y);
+    if (x < 0 || x >= pxW || y < 0 || y >= pxH) continue;
+    px[y * pxW + x] = p.color;
+    // Some pieces are two pixels wide, so the burst has a grain to it instead
+    // of reading as uniform dust at this resolution.
+    if (p.wide && x + 1 < pxW) px[y * pxW + x + 1] = p.color;
+  }
 }
 
 const HALF_TOP = '▀';
@@ -589,6 +674,12 @@ function overlay(lines) {
     center(lines, a, 'press  space  to start', '\x1b[2m');
   } else if (state.paused) {
     center(lines, a, 'P A U S E D', '\x1b[1m');
+  } else if (state.banner > 0) {
+    const wide = `L E V E L   ${String(state.level).split('').join(' ')}`;
+    const big = w >= wide.length + 2 ? wide : `LEVEL ${state.level}`;
+    const sub = `level ${state.level - 1} cleared`;
+    center(lines, a, big, '\x1b[1m' + fg(PALETTE[CONFETTI_COLORS[0]]));
+    if (b >= 0 && w >= sub.length + 2) center(lines, b, sub, '\x1b[2m');
   }
   return lines;
 }

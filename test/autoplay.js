@@ -53,12 +53,16 @@ const report = {
   sawBird: false,
   sawDuckBird: false,
   sawNight: false,
+  sawConfetti: false,
+  topLevel: 1,
   frames: 0,
 };
 
 const bot = setInterval(() => {
   report.frames++;
   if (state.night > 0.5) report.sawNight = true;
+  if (state.confetti.length > 0) report.sawConfetti = true;
+  report.topLevel = Math.max(report.topLevel, state.level);
 
   if (state.over) {
     report.deaths++;
@@ -93,6 +97,10 @@ setTimeout(() => {
   report.best = Math.max(report.best, state.score);
   for (const o of state.obstacles) if (o.kind === 'bird') report.sawBird = true;
 
+  // A level that turns over without a burst means the celebration is wired up
+  // wrong, which no amount of watching a headless run would show.
+  const noConfetti = report.topLevel > 1 && !report.sawConfetti;
+
   process.stdout.write = say;
   if (process.env.DUMP) {
     const plain = lastFrame
@@ -109,12 +117,17 @@ setTimeout(() => {
       `best score    ${report.best}`,
       `final speed   ${state.speed.toFixed(2)} px/tick`,
       `night seen    ${report.sawNight}`,
+      `top level     ${report.topLevel}`,
+      `confetti seen ${report.sawConfetti}`,
       '',
       report.deaths === 0
         ? 'PASS  bot survived the whole run'
         : `NOTE  bot died ${report.deaths}x - check jump arc vs obstacle heights`,
+      noConfetti ? 'FAIL  levelled up without a confetti burst' : '',
       '',
-    ].join('\n')
+    ]
+      .filter((l, i, all) => l !== '' || all[i - 1] !== '')
+      .join('\n')
   );
-  process.reallyExit(0);
+  process.reallyExit(noConfetti ? 1 : 0);
 }, SECONDS * 1000);
