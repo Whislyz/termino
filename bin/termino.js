@@ -42,12 +42,13 @@ const FAST_FALL = 0.6; // extra gravity while holding down mid-air
 // ~20px wide window of workable jump timings from the very first obstacle.
 const SPEED_START = 1.5; // pixels per tick
 const SPEED_MAX = 2.4;
-const SPEED_RAMP = 0.00022; // added per tick, reaches max in about two minutes
+const SPEED_RAMP = 0.00044; // added per tick, reaches max in about one minute
+const LEVEL_SPAN = 150; // score per level
 // Long enough that one keypress covers a full bird pass even if the terminal's
 // auto-repeat delay is slow to kick in. Jumping cancels the crouch anyway.
 const DUCK_HOLD_MS = 650;
-const NIGHT_AT = 900; // score where the first night falls
-const NIGHT_LEN = 900; // score span of one night
+const NIGHT_AT = 450; // score where the first night falls
+const NIGHT_LEN = 450; // score span of one night
 const MIN_COLS = 44;
 const MIN_ROWS = 12;
 
@@ -212,6 +213,7 @@ const state = {
   speed: SPEED_START,
   distance: 0,
   score: 0,
+  level: 1,
   hi: 0,
   tick: 0,
   obstacles: [],
@@ -303,6 +305,7 @@ function resetRun() {
   state.speed = SPEED_START;
   state.distance = 0;
   state.score = 0;
+  state.level = 1;
   state.tick = 0;
   state.over = false;
   state.started = false;
@@ -330,7 +333,7 @@ function dinoX() {
 }
 
 function spawnObstacle() {
-  const canFly = state.score > 350;
+  const canFly = state.score > 175;
   const flying = canFly && Math.random() < 0.22;
   if (flying) {
     // low: must jump.  mid: must duck.  high: runs clean overhead.
@@ -384,6 +387,7 @@ function update() {
   state.speed = Math.min(SPEED_MAX, state.speed + SPEED_RAMP);
   state.distance += state.speed;
   state.score = Math.floor(state.distance / 3);
+  state.level = Math.floor(state.score / LEVEL_SPAN) + 1;
 
   // day / night cycle
   const cyc = state.score - NIGHT_AT;
@@ -589,6 +593,19 @@ function overlay(lines) {
   return lines;
 }
 
+/**
+ * Right-align text on a rendered row, ending one column short of the edge so it
+ * lines up under the score. Drops that row's art, which costs nothing: clouds
+ * spawn at pixel row 2 or lower, so the top character row only ever holds the
+ * occasional star.
+ */
+function rightAt(lines, row, text, style) {
+  if (row < 0 || row >= lines.length) return;
+  const w = state.cols;
+  if (text.length + 1 > w) return;
+  lines[row] = ' '.repeat(w - text.length - 1) + (style || '') + text + '\x1b[0m';
+}
+
 /** Replace the middle of a rendered row with text (drops that row's art). */
 function center(lines, row, text, style) {
   if (row < 0 || row >= lines.length) return;
@@ -623,6 +640,9 @@ function draw() {
   } else {
     top = ' '.repeat(Math.max(state.cols - scoreLen - 1, 0)) + scoreText;
   }
+
+  // Level sits on the first canvas row, directly under the score.
+  if (state.started) rightAt(lines, 0, `LV ${state.level}`, dim);
 
   const hintFull = 'space jump  ·  ↓ duck  ·  p pause  ·  r restart  ·  q quit';
   const hintShort = 'space  ↓  p  r  q';

@@ -11,6 +11,7 @@ test suite.
 
 ```
  termino                                                          00268
+                                                                   LV 2
             ██▀██
             ████▀                                                   ▄▄▄▄
       ▄     ███                                                   ▄█████
@@ -89,8 +90,12 @@ termino --where         # names the splitter it would use, and exits
 
 Cacti and low pterodactyls: jump. **Mid-height pterodactyls: duck** — they fly
 at exactly the wrong height and cannot be jumped. High ones pass overhead if you
-keep running, and will hit you if you jump into them. The world speeds up for
-about two minutes; night falls at 900.
+keep running, and will hit you if you jump into them.
+
+The level shows under the score and turns over every 150 points. Progression is
+tuned so each stage arrives roughly twice as fast as it used to: the world tops
+out its speed after about a minute, pterodactyls start at 175, and night falls
+at 450.
 
 High score lives in `~/.termino-hiscore` (override with `$TERMINO_HISCORE`).
 
