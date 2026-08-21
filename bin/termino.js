@@ -43,7 +43,7 @@ const FAST_FALL = 0.6; // extra gravity while holding down mid-air
 const SPEED_START = 1.5; // pixels per tick
 const SPEED_MAX = 2.4;
 const SPEED_RAMP = 0.00044; // added per tick, reaches max in about one minute
-const LEVEL_SPAN = 150; // score per level
+const LEVEL_SPAN = 100; // score per level
 // Level-up celebration. The burst is floatier than the dino on purpose: paper
 // falls slower than a dinosaur, and a slow fall keeps the confetti on screen
 // for about as long as the banner it goes with.

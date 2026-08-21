@@ -92,7 +92,7 @@ Cacti and low pterodactyls: jump. **Mid-height pterodactyls: duck** — they fly
 at exactly the wrong height and cannot be jumped. High ones pass overhead if you
 keep running, and will hit you if you jump into them.
 
-The level shows under the score and turns over every 150 points. Clearing one
+The level shows under the score and turns over every 100 points. Clearing one
 pops a burst of confetti out of the dino's head and puts the new level up in the
 middle of the pane for a second — the pieces fall with their own gravity and
 wobble, and never touch collision, so a celebration cannot kill you.
