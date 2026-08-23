@@ -1,6 +1,6 @@
 {
   "name": "@whislyz/termino",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Type `termino` and it splits your terminal to play an endless runner beside your work. Half-block pixel art, zero dependencies.",
   "bin": {
     "termino": "bin/termino.js"
